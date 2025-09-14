@@ -1,5 +1,5 @@
 # ============================
-# Mapa toponimia Chiloé - Carpeta Mapa
+# Mapa toponimia Chiloé - Build en CI (GitHub Actions)
 # ============================
 
 # ---- 0) Paquetes ----
@@ -13,12 +13,9 @@ suppressWarnings({
   has_stringi <- requireNamespace("stringi", quietly = TRUE)
 })
 
-# ---- 0.1) Definir carpeta de trabajo ----
-setwd("C:/Users/galla/Desktop/Mapa")  # Ajusta tu usuario si es necesario
-getwd()  # Verifica que estás en la carpeta correcta
-
-# ---- 1) Cargar datos ----
-df <- read_csv("toponimia_chiloe.csv") |>
+# ---- 1) Cargar datos (rutas relativas, sin setwd) ----
+# Asegúrate de que tu CSV esté en data/toponimia_chiloe.csv
+df <- read_csv("data/toponimia_chiloe.csv") |>
   mutate(
     origen = tolower(trimws(origen)),
     nombre = trimws(nombre)
@@ -45,7 +42,7 @@ slugify <- function(x) {
 if (!"slug" %in% names(df)) df$slug <- slugify(df$nombre)
 df$slug <- ifelse(is.na(df$slug) | df$slug == "", slugify(df$nombre), df$slug)
 
-# ---- 3) Preparar carpetas ----
+# ---- 3) Preparar carpetas de salida (quedarán versionadas en el repo) ----
 dir.create("glosas_md", showWarnings = FALSE, recursive = TRUE)
 dir.create("glosas",    showWarnings = FALSE, recursive = TRUE)
 
@@ -55,11 +52,11 @@ if (!"glosa_url" %in% names(df)) df$glosa_url <- NA_character_
 for (i in seq_len(nrow(df))) {
   if (!is.na(df$glosa_url[i]) && nzchar(df$glosa_url[i])) next
   
-  slug_i <- df$slug[i]
+  slug_i   <- df$slug[i]
   nombre_i <- df$nombre[i]
   origen_i <- df$origen[i]
-  lon_i <- df$lon[i]
-  lat_i <- df$lat[i]
+  lon_i    <- df$lon[i]
+  lat_i    <- df$lat[i]
   
   md_path   <- file.path("glosas_md", paste0(slug_i, ".md"))
   html_path <- file.path("glosas",    paste0(slug_i, ".html"))
@@ -127,7 +124,7 @@ mapa <- leaflet(df) |>
     popup = ~paste0(
       "<b>", nombre, "</b><br>",
       "Origen: ", origen, "<br>",
-      "<a href='", glosa_url, "' target='_blank'>Abrir glosa en nueva pestaña</a>"
+      "<a href='", glosa_url, "' target='_blank' rel='noopener'>Abrir glosa en nueva pestaña</a>"
     )
   ) |>
   addLegend(
@@ -137,8 +134,11 @@ mapa <- leaflet(df) |>
     title = "Origen del topónimo"
   )
 
-# ---- 7) Exportar mapa ----
-saveWidget(mapa, "mapa_toponimia_chiloe.html", selfcontained = TRUE)
-browseURL("mapa_toponimia_chiloe.html")
+# ---- 7) Exportar mapa (self-contained y nombre de salida) ----
+htmlwidgets::saveWidget(
+  widget = mapa,
+  file   = "index.html",      # <- clave para GitHub Pages
+  selfcontained = TRUE        # <- todo embebido, más simple para publicar
+)
 
-
+# (sin browseURL en CI)
