@@ -1,43 +1,58 @@
-name: Build map (container)
+name: Build & Deploy Map
 
 on:
   push:
     paths:
-      - "data/**"
-      - "build_map.R"
-      - ".github/workflows/build-map.yml"
+      - "data/**/*.csv"          # <-- AJUSTA si tu CSV está en otra carpeta
+      - "build_map.R"            # <-- AJUSTA si tu script se llama distinto
+      - "scripts/**/*.R"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: rocker/r-ver:4.4.1   # R ya viene dentro del contenedor
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure .nojekyll (por si no existe)
-        run: |
-          touch .nojekyll
-
-      - name: Install R packages
-        run: |
-          R -q -e 'options(repos="https://cloud.r-project.org"); install.packages(c("readr","dplyr","leaflet","htmlwidgets","commonmark"))'
-
-      - name: Build map
-        run: |
-          R -q -e 'source("build_map.R")'
-
-      - name: Commit output (index.html + glosas)
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
         with:
-          commit_message: "chore: rebuild site"
-          file_pattern: |
-            .nojekyll
-            index.html
-            glosas/**
-            glosas_md/**
+          r-version: 'release'
+
+      - name: Install dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::readr
+            any::dplyr
+            any::leaflet
+            any::htmlwidgets
+            any::stringi
+            any::fs
+            any::commonmark
+            any::htmltools
+            any::purrr
+
+      - name: Build map (Rscript)
+        run: Rscript build_map.R    # <-- AJUSTA si tu script tiene otro nombre
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs               # <-- Debe contener index.html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
