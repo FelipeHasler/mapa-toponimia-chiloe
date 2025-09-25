@@ -137,7 +137,7 @@ mapa <- leaflet(df) |>
 # ---- 7) Exportar mapa (self-contained y nombre de salida) ----
 htmlwidgets::saveWidget(
   widget = mapa,
-  file   = "index.html",      # <- clave para GitHub Pages
+  file   = "docs/index.html",      # <- clave para GitHub Pages
   selfcontained = TRUE        # <- todo embebido, más simple para publicar
 )
 
