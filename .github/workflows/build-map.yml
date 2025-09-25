@@ -3,8 +3,8 @@ name: Build & Deploy Map
 on:
   push:
     paths:
-      - "data/**/*.csv"          # <-- AJUSTA si tu CSV está en otra carpeta
-      - "build_map.R"            # <-- AJUSTA si tu script se llama distinto
+      - "data/**/*.csv"          # dispara cuando cambia el CSV
+      - "build_map.R"            # dispara si cambias el script
       - "scripts/**/*.R"
   workflow_dispatch:
 
@@ -17,15 +17,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Setup R
         uses: r-lib/actions/setup-r@v2
         with:
           r-version: 'release'
+          use-public-rspm: true  # repositorio estable de Posit
 
-      - name: Install dependencies
+      - name: Instalar dependencias
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
@@ -39,13 +40,13 @@ jobs:
             any::htmltools
             any::purrr
 
-      - name: Build map (Rscript)
-        run: Rscript build_map.R    # <-- AJUSTA si tu script tiene otro nombre
+      - name: Ejecutar script para generar mapa
+        run: Rscript build_map.R
 
-      - name: Upload Pages artifact
+      - name: Subir sitio a Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs               # <-- Debe contener index.html
+          path: docs               # carpeta con index.html
 
   deploy:
     needs: build
